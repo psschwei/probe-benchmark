@@ -67,7 +67,6 @@ func Run(ns string, podObj *corev1.Pod, typ, template string, podN int, skipDele
 
 	// skip if podObj is empty
 	if !reflect.DeepEqual(podObj, &corev1.Pod{}) {
-		fmt.Println("setting podFn for pobObj")
 		fn, err := podtemplate.PodConstructorFromObject(podObj)
 		if err != nil {
 			log.Fatalln("Failed to generate pod object from file", err)
@@ -104,7 +103,7 @@ func Run(ns string, podObj *corev1.Pod, typ, template string, podN int, skipDele
 	}
 
 	runLabels := labels.Set{
-		"podspeed/run": uuid.NewString(),
+		"podspeed/run": uuid.New().String(),
 	}
 	watcher, err := kube.CoreV1().Pods(ns).Watch(ctx, metav1.ListOptions{
 		LabelSelector: runLabels.String(),
@@ -117,7 +116,7 @@ func Run(ns string, podObj *corev1.Pod, typ, template string, podN int, skipDele
 	stats := make(map[string]*pod.Stats, podN)
 
 	for i := 0; i < podN; i++ {
-		p := podFn(ns, typ+"-"+uuid.NewString())
+		p := podFn(ns, typ+"-"+uuid.New().String())
 		p.Labels = runLabels
 		pods = append(pods, p)
 		stats[p.Name] = &pod.Stats{}
