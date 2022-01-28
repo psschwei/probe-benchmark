@@ -1,0 +1,143 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test
+spec:
+  containers:
+  - env:
+    - name: PORT
+      value: "8080"
+    - name: K_REVISION
+      value: test-00001
+    - name: K_CONFIGURATION
+      value: test
+    - name: K_SERVICE
+      value: test
+    image: docker.io/markusthoemmes/basic-500716b931f14b4a09df1ec4b4c5550d@sha256:06a71c34b05cd9d74fb9aa904ba256b525a7c39df0708b8cbbfcce923ad8af01
+    imagePullPolicy: IfNotPresent
+    lifecycle:
+      preStop:
+        httpGet:
+          path: /wait-for-drain
+          port: 8022
+          scheme: HTTP
+    name: user-container
+    ports:
+    - containerPort: 8080
+      name: user-port
+      protocol: TCP
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: FallbackToLogsOnError
+  - env:
+    - name: SERVING_NAMESPACE
+      value: default
+    - name: SERVING_SERVICE
+      value: test
+    - name: SERVING_CONFIGURATION
+      value: test
+    - name: SERVING_REVISION
+      value: test-00001
+    - name: QUEUE_SERVING_PORT
+      value: "8012"
+    - name: CONTAINER_CONCURRENCY
+      value: "0"
+    - name: REVISION_TIMEOUT_SECONDS
+      value: "300"
+    - name: SERVING_POD
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: metadata.name
+    - name: SERVING_POD_IP
+      valueFrom:
+        fieldRef:
+          apiVersion: v1
+          fieldPath: status.podIP
+    - name: SERVING_LOGGING_CONFIG
+    - name: SERVING_LOGGING_LEVEL
+    - name: SERVING_REQUEST_LOG_TEMPLATE
+      value: '{"httpRequest": {"requestMethod": "{{.Request.Method}}", "requestUrl":
+        "{{js .Request.RequestURI}}", "requestSize": "{{.Request.ContentLength}}",
+        "status": {{.Response.Code}}, "responseSize": "{{.Response.Size}}", "userAgent":
+        "{{js .Request.UserAgent}}", "remoteIp": "{{js .Request.RemoteAddr}}", "serverIp":
+        "{{.Revision.PodIP}}", "referer": "{{js .Request.Referer}}", "latency": "{{.Response.Latency}}s",
+        "protocol": "{{.Request.Proto}}"}, "traceId": "{{index .Request.Header "X-B3-Traceid"}}"}'
+    - name: SERVING_ENABLE_REQUEST_LOG
+      value: "false"
+    - name: SERVING_REQUEST_METRICS_BACKEND
+      value: prometheus
+    - name: TRACING_CONFIG_BACKEND
+      value: none
+    - name: TRACING_CONFIG_ZIPKIN_ENDPOINT
+    - name: TRACING_CONFIG_DEBUG
+      value: "false"
+    - name: TRACING_CONFIG_SAMPLE_RATE
+      value: "0.1"
+    - name: USER_PORT
+      value: "8080"
+    - name: SYSTEM_NAMESPACE
+      value: knative-serving
+    - name: METRICS_DOMAIN
+      value: knative.dev/internal/serving
+    - name: SERVING_READINESS_PROBE
+      value: '{"tcpSocket":{"port":8080,"host":"127.0.0.1"},"successThreshold":1}'
+    - name: ENABLE_PROFILING
+      value: "false"
+    - name: SERVING_ENABLE_PROBE_REQUEST_LOG
+      value: "false"
+    - name: METRICS_COLLECTOR_ADDRESS
+    - name: CONCURRENCY_STATE_ENDPOINT
+    - name: ENABLE_HTTP2_AUTO_DETECTION
+      value: "false"
+    image: docker.io/markusthoemmes/queue-39be6f1d08a095bd076a71d288d295b6@sha256:dcd7ff146c30bd087b3b7d4dbeea1de148ce39e7542a8f56cc99c127c5c9baaf
+    imagePullPolicy: IfNotPresent
+    name: queue-proxy
+    ports:
+    - containerPort: 8022
+      name: http-queueadm
+      protocol: TCP
+    - containerPort: 9090
+      name: http-autometric
+      protocol: TCP
+    - containerPort: 9091
+      name: http-usermetric
+      protocol: TCP
+    - containerPort: 8012
+      name: queue-port
+      protocol: TCP
+    readinessProbe:
+      failureThreshold: 3
+      httpGet:
+        httpHeaders:
+        - name: K-Network-Probe
+          value: queue
+        path: /
+        port: 8012
+        scheme: HTTP
+      periodSeconds: 1
+      successThreshold: 1
+      timeoutSeconds: 1
+    resources:
+      requests:
+        cpu: 25m
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - all
+      readOnlyRootFilesystem: true
+      runAsNonRoot: true
+    startupProbe:
+      failureThreshold: 1
+      httpGet:
+        httpHeaders:
+        - name: K-Network-Probe
+          value: queue
+        path: /
+        port: 8012
+        scheme: HTTP
+      periodSeconds: 1
+      successThreshold: 1
+      timeoutSeconds: 1
+  terminationGracePeriodSeconds: 300
