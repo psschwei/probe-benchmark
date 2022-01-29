@@ -3,7 +3,7 @@ module github.com/psschwei/probe-benchmark
 go 1.17
 
 require (
-	github.com/psschwei/podspeed v0.0.0-20220128173000-622c6130b4cb
+	github.com/psschwei/podspeed v0.0.2
 	k8s.io/api v0.23.3
 	k8s.io/apimachinery v0.23.3
 )
